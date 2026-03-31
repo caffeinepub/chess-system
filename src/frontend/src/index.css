@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "BricolageGrotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/assets/fonts/Satoshi.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "GeistMono";
+  src: url("/assets/fonts/GeistMono.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Dark RPG Navy palette */
+    --background: 0.1 0.022 255;
+    --foreground: 0.92 0 0;
+    --card: 0.15 0.018 255;
+    --card-foreground: 0.92 0 0;
+    --popover: 0.17 0.02 255;
+    --popover-foreground: 0.92 0 0;
+    --primary: 0.62 0.19 255;
+    --primary-foreground: 0.1 0.022 255;
+    --secondary: 0.49 0.22 275;
+    --secondary-foreground: 0.92 0 0;
+    --muted: 0.2 0.015 255;
+    --muted-foreground: 0.6 0.01 255;
+    --accent: 0.82 0.12 200;
+    --accent-foreground: 0.1 0.022 255;
+    --destructive: 0.65 0.22 25;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.28 0.025 255;
+    --input: 0.2 0.018 255;
+    --ring: 0.62 0.19 255;
+
+    /* Chart colors */
+    --chart-1: 0.62 0.19 255;
+    --chart-2: 0.49 0.22 275;
+    --chart-3: 0.82 0.12 200;
+    --chart-4: 0.79 0.15 165;
+    --chart-5: 0.72 0.17 280;
+
+    /* Sidebar */
+    --sidebar: 0.12 0.02 255;
+    --sidebar-foreground: 0.92 0 0;
+    --sidebar-primary: 0.62 0.19 255;
+    --sidebar-primary-foreground: 0.1 0 0;
+    --sidebar-accent: 0.2 0.015 255;
+    --sidebar-accent-foreground: 0.92 0 0;
+    --sidebar-border: 0.25 0.02 255;
+    --sidebar-ring: 0.62 0.19 255;
+
+    /* Custom tokens */
+    --glow-blue: 0.62 0.19 255;
+    --glow-violet: 0.49 0.22 275;
+    --glow-cyan: 0.82 0.12 200;
+    --glow-teal: 0.79 0.15 165;
+    --glow-gold: 0.82 0.18 85;
+    --glow-red: 0.65 0.22 25;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+    background: radial-gradient(
+      ellipse at top,
+      oklch(0.13 0.03 255) 0%,
+      oklch(0.08 0.018 255) 60%,
+      oklch(0.07 0.015 260) 100%
+    );
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .glow-blue {
+    box-shadow: 0 0 20px oklch(0.62 0.19 255 / 0.4), 0 0 40px
+      oklch(0.62 0.19 255 / 0.15);
+  }
+  .glow-violet {
+    box-shadow: 0 0 20px oklch(0.49 0.22 275 / 0.4), 0 0 40px
+      oklch(0.49 0.22 275 / 0.15);
+  }
+  .glow-red {
+    box-shadow: 0 0 20px oklch(0.65 0.22 25 / 0.5), 0 0 60px
+      oklch(0.65 0.22 25 / 0.2);
+  }
+  .glow-gold {
+    box-shadow: 0 0 20px oklch(0.82 0.18 85 / 0.5), 0 0 60px
+      oklch(0.82 0.18 85 / 0.2);
+  }
+  .glow-text-blue {
+    text-shadow: 0 0 20px oklch(0.62 0.19 255 / 0.8), 0 0 40px
+      oklch(0.62 0.19 255 / 0.4);
+  }
+  .glow-text-gold {
+    text-shadow: 0 0 20px oklch(0.82 0.18 85 / 0.8), 0 0 40px
+      oklch(0.82 0.18 85 / 0.4);
+  }
+  .card-glass {
+    background: oklch(0.15 0.018 255 / 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid oklch(0.3 0.025 255 / 0.5);
+  }
+  .neon-border-blue {
+    border: 1px solid oklch(0.62 0.19 255 / 0.4);
+    box-shadow: 0 0 15px oklch(0.62 0.19 255 / 0.15), inset 0 0 15px
+      oklch(0.62 0.19 255 / 0.05);
+  }
+  .neon-border-violet {
+    border: 1px solid oklch(0.49 0.22 275 / 0.4);
+    box-shadow: 0 0 15px oklch(0.49 0.22 275 / 0.15), inset 0 0 15px
+      oklch(0.49 0.22 275 / 0.05);
+  }
+  .neon-border-red {
+    border: 1px solid oklch(0.65 0.22 25 / 0.5);
+    box-shadow: 0 0 20px oklch(0.65 0.22 25 / 0.2), inset 0 0 15px
+      oklch(0.65 0.22 25 / 0.05);
+  }
+}
+
+/* XP Progress bar gradient */
+.xp-bar-fill {
+  background: linear-gradient(90deg, oklch(0.62 0.19 255), oklch(0.49 0.22 275));
+}
+
+/* Skill bar gradient */
+.skill-bar-fill {
+  background: linear-gradient(90deg, oklch(0.62 0.19 255), oklch(0.82 0.12 200));
+}
+
+/* Level up animation */
+@keyframes levelup-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+@keyframes levelup-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 30px oklch(0.82 0.18 85 / 0.9), 0 0 80px
+      oklch(0.82 0.18 85 / 0.5);
+  }
+  50% {
+    text-shadow: 0 0 60px oklch(0.82 0.18 85 / 1), 0 0 120px
+      oklch(0.82 0.18 85 / 0.7), 0 0 200px oklch(0.62 0.19 255 / 0.5);
+  }
+}
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+}
+@keyframes rank-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotateY(90deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateY(0deg);
+  }
+}
+.animate-levelup-glow {
+  animation: levelup-glow 1.5s ease-in-out infinite;
+}
+.animate-levelup-pulse {
+  animation: levelup-pulse 1.5s ease-in-out infinite;
+}
+.animate-float-up {
+  animation: float-up 2s ease-out forwards;
+}
+.animate-rank-reveal {
+  animation: rank-reveal 0.6s ease-out forwards;
+}
+
+/* Particle effect */
+@keyframes particle-rise {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0);
+  }
+}
+.animate-particle {
+  animation: particle-rise 1.5s ease-out forwards;
+}
+
+/* Chessboard */
+.chess-light {
+  background-color: #000000;
+}
+.chess-dark {
+  background-color: oklch(0.62 0.19 255);
+}
+
+/* Black chess piece outline for visibility on dark/black squares */
+.chess-piece-black {
+  color: #000;
+  -webkit-text-stroke: 1.5px #ffffff;
+  text-shadow: 0 0 3px #fff, 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff,
+    -1px 1px 0 #fff;
+}
+
+/* White chess piece on dark backgrounds */
+.chess-piece-white {
+  color: #fff;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(0.1 0.022 255);
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.3 0.05 255);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.62 0.19 255);
+}
