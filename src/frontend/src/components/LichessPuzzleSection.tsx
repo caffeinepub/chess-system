@@ -4,7 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LevelUpResult } from "../hooks/useGameState";
-import { LICHESS_THEMES, useLichessPuzzle } from "../hooks/useLichessPuzzle";
+import { LICHESS_THEMES } from "../hooks/useLichessPuzzle";
+import { useStaticPuzzles } from "../hooks/useStaticPuzzles";
 import {
   calculateNewElo,
   getPlayerElo,
@@ -18,8 +19,8 @@ interface LichessPuzzleSectionProps {
 }
 
 export function LichessPuzzleSection({ earnXp }: LichessPuzzleSectionProps) {
-  const { puzzle, loading, error, theme, loadPuzzle, nextPuzzle } =
-    useLichessPuzzle();
+  const { puzzle, loading, error, theme, loadPuzzle, nextPuzzle, totalCount } =
+    useStaticPuzzles();
   const [solved, setSolved] = useState(false);
   const [playerElo, setPlayerElo] = useState(() => getPlayerElo());
   const [eloChange, setEloChange] = useState<number | null>(null);
@@ -76,17 +77,33 @@ export function LichessPuzzleSection({ earnXp }: LichessPuzzleSectionProps) {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
       {/* Header */}
       <div className="mb-8">
-        <h1
-          className="font-display font-extrabold text-3xl uppercase tracking-widest mb-2"
-          style={{ color: "oklch(0.92 0 0)" }}
-        >
-          Puzzles
-        </h1>
+        <div className="flex items-center gap-3 mb-2">
+          <h1
+            className="font-display font-extrabold text-3xl uppercase tracking-widest"
+            style={{ color: "oklch(0.92 0 0)" }}
+          >
+            Puzzles
+          </h1>
+          {totalCount > 0 && (
+            <span
+              className="text-xs font-mono px-2.5 py-1 rounded-full uppercase tracking-wider"
+              style={{
+                background: "oklch(0.62 0.19 255 / 0.15)",
+                color: "oklch(0.72 0.19 255)",
+                border: "1px solid oklch(0.62 0.19 255 / 0.35)",
+              }}
+            >
+              {totalCount >= 1000
+                ? `${Math.floor(totalCount / 1000)}k+ puzzles`
+                : `${totalCount} puzzles`}
+            </span>
+          )}
+        </div>
         <p
           className="text-sm font-body"
           style={{ color: "oklch(0.55 0.01 255)" }}
         >
-          Live puzzles from the Lichess database — rated, themed, and endless.
+          50,000 themed puzzles — rated and ready.
         </p>
       </div>
 

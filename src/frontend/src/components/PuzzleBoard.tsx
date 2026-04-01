@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Puzzle } from "../data/puzzles";
 
 interface PuzzleBoardProps {
@@ -9,7 +9,7 @@ interface PuzzleBoardProps {
   solved: boolean;
 }
 
-type FlashState = "none" | "correct" | "wrong";
+type FlashState = "none" | "correct" | "wrong" | "opponent";
 
 const IS_WHITE_PIECE: Record<string, boolean> = {
   K: true,
@@ -489,6 +489,29 @@ function squareToCoords(sq: string): [number, number] {
   return [rank, file];
 }
 
+function applyMoveStr(
+  board: (string | null)[][],
+  moveStr: string,
+): (string | null)[][] {
+  const from = moveStr.substring(0, 2);
+  const to = moveStr.substring(2, 4);
+  const [fr, fc] = squareToCoords(from);
+  const [tr, tc] = squareToCoords(to);
+  const next = board.map((r) => [...r]);
+  // Handle pawn promotion (5th char = promotion piece)
+  const promo = moveStr.length >= 5 ? moveStr[4] : null;
+  if (promo) {
+    // Determine color by source piece
+    const srcPiece = next[fr][fc];
+    const isWhitePiece = srcPiece !== null && IS_WHITE_PIECE[srcPiece];
+    next[tr][tc] = isWhitePiece ? promo.toUpperCase() : promo.toLowerCase();
+  } else {
+    next[tr][tc] = next[fr][fc];
+  }
+  next[fr][fc] = null;
+  return next;
+}
+
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const RANKS = ["8", "7", "6", "5", "4", "3", "2", "1"];
 
@@ -509,23 +532,129 @@ export function PuzzleBoard({
   );
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [flash, setFlash] = useState<FlashState>("none");
+  // moveStep: index in fullSolution the player is currently solving (odd indices)
+  const [moveStep, setMoveStep] = useState(1);
+  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const [lastMoveSquares, setLastMoveSquares] = useState<
+    [string, string] | null
+  >(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const hasFullSolution =
+    Array.isArray((puzzle as any).fullSolution) &&
+    (puzzle as any).fullSolution.length >= 2;
+  const fullSolution: string[] = hasFullSolution
+    ? (puzzle as any).fullSolution
+    : [];
+
+  // Reset & play opponent's first move when puzzle changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: puzzle.fen covers all puzzle-related changes
   useEffect(() => {
-    setBoard(parseFen(puzzle.fen));
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    const initialBoard = parseFen(puzzle.fen);
+    setBoard(initialBoard);
     setSelected(null);
     setFlash("none");
+    setLastMoveSquares(null);
+
+    if (hasFullSolution && fullSolution.length >= 2) {
+      setMoveStep(1);
+      setWaitingForOpponent(true);
+      timerRef.current = setTimeout(() => {
+        const opponentMove = fullSolution[0];
+        const from = opponentMove.substring(0, 2);
+        const to = opponentMove.substring(2, 4);
+        setBoard(applyMoveStr(initialBoard, opponentMove));
+        setLastMoveSquares([from, to]);
+        setWaitingForOpponent(false);
+      }, 800);
+    } else {
+      setMoveStep(1);
+      setWaitingForOpponent(false);
+    }
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [puzzle.fen]);
 
+  // Determine player's side from fullSolution[1] after opponent has moved
+  const getPlayerSide = (
+    currentBoard: (string | null)[][],
+  ): "white" | "black" => {
+    if (!hasFullSolution || fullSolution.length < 2) return puzzle.sideToMove;
+    const playerMoveStr = fullSolution[moveStep];
+    if (!playerMoveStr) return puzzle.sideToMove;
+    const [r, c] = squareToCoords(playerMoveStr.substring(0, 2));
+    const piece = currentBoard[r][c];
+    if (piece === null) return puzzle.sideToMove;
+    return IS_WHITE_PIECE[piece] ? "white" : "black";
+  };
+
   const handleSquareClick = (row: number, col: number) => {
-    if (solved || flash === "correct") return;
+    if (solved || flash === "correct" || waitingForOpponent) return;
 
     const piece = board[row][col];
+    const playerSide = getPlayerSide(board);
 
+    if (!hasFullSolution) {
+      // Legacy path: use solutionFrom / solutionTo
+      if (selected === null) {
+        if (piece === null) return;
+        const isWhite = IS_WHITE_PIECE[piece];
+        if (puzzle.sideToMove === "white" && !isWhite) return;
+        if (puzzle.sideToMove === "black" && isWhite) return;
+        setSelected([row, col]);
+      } else {
+        const [selRow, selCol] = selected;
+        if (selRow === row && selCol === col) {
+          setSelected(null);
+          return;
+        }
+        const fromFile = FILES[selCol];
+        const fromRank = RANKS[selRow];
+        const toFile = FILES[col];
+        const toRank = RANKS[row];
+        const fromSq = fromFile + fromRank;
+        const toSq = toFile + toRank;
+
+        if (fromSq === puzzle.solutionFrom && toSq === puzzle.solutionTo) {
+          setBoard((prev) => {
+            const next = prev.map((r) => [...r]);
+            next[row][col] = next[selRow][selCol];
+            next[selRow][selCol] = null;
+            return next;
+          });
+          setSelected(null);
+          setFlash("correct");
+          onCorrect();
+        } else {
+          if (piece !== null) {
+            const isWhite = IS_WHITE_PIECE[piece];
+            if (
+              (puzzle.sideToMove === "white" && isWhite) ||
+              (puzzle.sideToMove === "black" && !isWhite)
+            ) {
+              setSelected([row, col]);
+              return;
+            }
+          }
+          setSelected(null);
+          setFlash("wrong");
+          setTimeout(() => setFlash("none"), 700);
+          onWrong();
+        }
+      }
+      return;
+    }
+
+    // Full-solution path
     if (selected === null) {
       if (piece === null) return;
       const isWhite = IS_WHITE_PIECE[piece];
-      if (puzzle.sideToMove === "white" && !isWhite) return;
-      if (puzzle.sideToMove === "black" && isWhite) return;
+      if (playerSide === "white" && !isWhite) return;
+      if (playerSide === "black" && isWhite) return;
       setSelected([row, col]);
     } else {
       const [selRow, selCol] = selected;
@@ -534,29 +663,55 @@ export function PuzzleBoard({
         return;
       }
 
-      const fromFile = FILES[selCol];
-      const fromRank = RANKS[selRow];
-      const toFile = FILES[col];
-      const toRank = RANKS[row];
-      const fromSq = fromFile + fromRank;
-      const toSq = toFile + toRank;
+      const fromSq = squareKey(selRow, selCol);
+      const toSq = squareKey(row, col);
+      const expectedMove = fullSolution[moveStep];
+      const expectedFrom = expectedMove?.substring(0, 2);
+      const expectedTo = expectedMove?.substring(2, 4);
 
-      if (fromSq === puzzle.solutionFrom && toSq === puzzle.solutionTo) {
-        setBoard((prev) => {
-          const next = prev.map((r) => [...r]);
-          next[row][col] = next[selRow][selCol];
-          next[selRow][selCol] = null;
-          return next;
-        });
+      const isCorrect = fromSq === expectedFrom && toSq === expectedTo;
+
+      if (isCorrect) {
+        const newBoard = applyMoveStr(board, expectedMove);
+        setBoard(newBoard);
+        setLastMoveSquares([fromSq, toSq]);
         setSelected(null);
-        setFlash("correct");
-        onCorrect();
+
+        const nextOpponentStep = moveStep + 1;
+        const nextPlayerStep = moveStep + 2;
+
+        if (fullSolution[nextOpponentStep]) {
+          // Opponent has a follow-up move
+          setWaitingForOpponent(true);
+          timerRef.current = setTimeout(() => {
+            const opponentMove = fullSolution[nextOpponentStep];
+            const oFrom = opponentMove.substring(0, 2);
+            const oTo = opponentMove.substring(2, 4);
+            const boardAfterOpponent = applyMoveStr(newBoard, opponentMove);
+            setBoard(boardAfterOpponent);
+            setLastMoveSquares([oFrom, oTo]);
+            setWaitingForOpponent(false);
+
+            if (fullSolution[nextPlayerStep]) {
+              setMoveStep(nextPlayerStep);
+            } else {
+              // Puzzle complete after opponent's final move
+              setFlash("correct");
+              onCorrect();
+            }
+          }, 700);
+        } else {
+          // No more opponent moves -- puzzle complete
+          setFlash("correct");
+          onCorrect();
+        }
       } else {
+        // Wrong move -- allow reselection if clicking own piece
         if (piece !== null) {
           const isWhite = IS_WHITE_PIECE[piece];
           if (
-            (puzzle.sideToMove === "white" && isWhite) ||
-            (puzzle.sideToMove === "black" && !isWhite)
+            (playerSide === "white" && isWhite) ||
+            (playerSide === "black" && !isWhite)
           ) {
             setSelected([row, col]);
             return;
@@ -574,6 +729,20 @@ export function PuzzleBoard({
 
   return (
     <div className="flex flex-col items-center">
+      {/* Status indicator */}
+      {waitingForOpponent && (
+        <div
+          className="mb-2 px-3 py-1 rounded text-xs font-bold tracking-wider"
+          style={{
+            background: "oklch(0.25 0.05 85 / 0.8)",
+            color: "oklch(0.85 0.15 85)",
+            border: "1px solid oklch(0.50 0.14 85 / 0.5)",
+          }}
+        >
+          ⟳ OPPONENT IS MOVING...
+        </div>
+      )}
+
       <div
         className="relative rounded-lg overflow-hidden select-none"
         style={{
@@ -624,17 +793,26 @@ export function PuzzleBoard({
                     selected[1] === ci;
                   const isFromSquare =
                     solved && ri === solFrom && ci === solFromCol;
+                  const sqKey = squareKey(ri, ci);
+                  const isLastMove =
+                    lastMoveSquares !== null &&
+                    (sqKey === lastMoveSquares[0] ||
+                      sqKey === lastMoveSquares[1]);
 
                   let bg = isLight ? "#000000" : "oklch(0.62 0.19 255)";
+                  if (isLastMove) {
+                    bg = isLight
+                      ? "oklch(0.30 0.08 85)"
+                      : "oklch(0.50 0.14 255)";
+                  }
                   if (isSelected) bg = "oklch(0.42 0.18 255)";
                   if (isFromSquare) bg = "oklch(0.42 0.18 142)";
 
                   const PieceComponent = piece ? PIECE_COMPONENTS[piece] : null;
-                  const key = squareKey(ri, ci);
 
                   return (
                     <button
-                      key={key}
+                      key={sqKey}
                       type="button"
                       onClick={() => handleSquareClick(ri, ci)}
                       style={{
@@ -644,7 +822,8 @@ export function PuzzleBoard({
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        cursor: solved ? "default" : "pointer",
+                        cursor:
+                          solved || waitingForOpponent ? "default" : "pointer",
                         transition: "background 0.15s",
                         outline: "none",
                         border: "none",
